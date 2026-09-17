@@ -1,10 +1,12 @@
 import json
 from fractions import Fraction
 
+import pytest
+
 from notation_transposer.model import Duration, NTXDocument, Pitch
 from notation_transposer.model.events import Note
+from notation_transposer.model.serialization import dumps, loads, to_dict
 from notation_transposer.model.structure import Measure, Part, Score, Staff, Voice
-from notation_transposer.model.serialization import dumps, to_dict
 from notation_transposer.transform import transpose_document
 
 
@@ -45,6 +47,18 @@ def test_serialization_is_json_native_and_deterministic():
     json.dumps(data)
     assert data["ntx_version"] == "0.1"
     assert first.endswith("\n")
+
+
+def test_serialization_round_trip_reconstructs_document():
+    doc = sample()
+    assert loads(dumps(doc)) == doc
+
+
+def test_deserialization_rejects_unsupported_major_version():
+    data = to_dict(sample())
+    data["ntx_version"] = "1.0"
+    with pytest.raises(ValueError, match="unsupported NTX major version"):
+        loads(json.dumps(data))
 
 
 def test_invalid_document_id_rejected():
