@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .events import Chord, Note, Rest
 from .rhythm import TimeSignature
@@ -49,6 +49,10 @@ class Part:
     instrument: str | None = None
     transposition_semitones: int = 0
 
+    def __post_init__(self) -> None:
+        if not self.id.strip():
+            raise ValueError("part id cannot be empty")
+
 
 @dataclass(frozen=True, slots=True)
 class Score:
@@ -69,35 +73,3 @@ class Diagnostic:
     message: str
     severity: str = "warning"
     path: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class NTXDocument:
-    document_id: str
-    score: Score
-    metadata: dict[str, object] = field(default_factory=dict)
-    sources: tuple[Source, ...] = ()
-    diagnostics: tuple[Diagnostic, ...] = ()
-    provenance: dict[str, object] = field(default_factory=dict)
-    ntx_version: str = "0.1"
-
-    def __post_init__(self) -> None:
-        if not self.document_id.strip():
-            raise ValueError("document_id cannot be empty")
-        if self.ntx_version.split(".")[0] != "0":
-            raise ValueError("unsupported NTX major version")
-
-    def validate(self) -> tuple[Diagnostic, ...]:
-        diagnostics: list[Diagnostic] = list(self.diagnostics)
-        seen_parts: set[str] = set()
-        for part in self.score.parts:
-            if part.id in seen_parts:
-                diagnostics.append(Diagnostic("DUPLICATE_PART_ID", f"duplicate part id: {part.id}", "error"))
-            seen_parts.add(part.id)
-            seen_measures: set[int] = set()
-            for staff in part.staves:
-                for measure in staff.measures:
-                    if measure.number in seen_measures:
-                        diagnostics.append(Diagnostic("DUPLICATE_MEASURE", f"duplicate measure {measure.number} on staff {staff.number}", "error"))
-                    seen_measures.add(measure.number)
-        return tuple(diagnostics)
