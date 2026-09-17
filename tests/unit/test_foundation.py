@@ -2,19 +2,19 @@ import json
 from fractions import Fraction
 
 from notation_transposer.model import Duration, NTXDocument, Pitch
-from notation_transposer.model.document import Score
 from notation_transposer.model.events import Note
-from notation_transposer.model.structure import Measure, Part, Staff, Voice
+from notation_transposer.model.structure import Measure, Part, Score, Staff, Voice
 from notation_transposer.model.serialization import dumps, to_dict
 from notation_transposer.transform import transpose_document
 
 
 def sample() -> NTXDocument:
     note = Note(Pitch("C", 4), Duration(Fraction(1, 4)), id="n1")
-    return NTXDocument(
-        document_id="test-1",
-        score=Score((Part("P1", "Piano", (Staff(1, "treble", (Measure(1, (Voice(1, (note,)),)),)),)),)),)),
-    )
+    voice = Voice(1, (note,))
+    measure = Measure(1, (voice,))
+    staff = Staff(1, "treble", (measure,))
+    part = Part("P1", "Piano", (staff,))
+    return NTXDocument(document_id="test-1", score=Score((part,)))
 
 
 def test_pitch_preserves_spelling_information():
@@ -32,17 +32,32 @@ def test_transpose_changes_pitch_not_rhythm_or_structure():
     assert result.score.parts[0].id == "P1"
 
 
-def test_serialization_is_json_native():
+def test_transpose_preserves_negative_and_octave_crossing():
+    assert Pitch("C", 4).transpose_chromatic(-1) == Pitch("B", 3)
+    assert Pitch("B", 4).transpose_chromatic(1) == Pitch("C", 5)
+
+
+def test_serialization_is_json_native_and_deterministic():
+    first = dumps(sample())
+    second = dumps(sample())
+    assert first == second
     data = to_dict(sample())
     json.dumps(data)
     assert data["ntx_version"] == "0.1"
-    assert dumps(sample()).endswith("\n")
+    assert first.endswith("\n")
 
 
 def test_invalid_document_id_rejected():
     try:
         NTXDocument(document_id="", score=Score())
     except ValueError as exc:
-        assert "document_id" in str(exc)
+        assert "document id" in str(exc)
     else:
         raise AssertionError("empty document id was accepted")
+
+
+def test_duplicate_part_ids_are_diagnostic():
+    part = Part("P1", "Piano")
+    doc = NTXDocument(document_id="test-duplicate", score=Score((part, part)))
+    diagnostics = doc.validate()
+    assert any(d.code == "DUPLICATE_PART_ID" and d.severity == "error" for d in diagnostics)
