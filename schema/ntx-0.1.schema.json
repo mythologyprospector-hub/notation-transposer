@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mythologyprospector-hub/notation-transposer/schema/ntx-0.1.schema.json",
+  "title": "NTX Document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ntx_version", "document_id", "metadata", "sources", "score", "diagnostics", "provenance"],
+  "properties": {
+    "ntx_version": {"const": "0.1"},
+    "document_id": {"type": "string", "minLength": 1},
+    "metadata": {"type": "object"},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "score": {"$ref": "#/$defs/score"},
+    "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+    "provenance": {"type": "object"}
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "location": {"type": ["string", "null"]},
+        "checksum": {"type": ["string", "null"]}
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "severity"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1},
+        "severity": {"type": "string"},
+        "path": {"type": ["string", "null"]}
+      }
+    },
+    "pitch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["step", "octave", "alter"],
+      "properties": {
+        "step": {"enum": ["C", "D", "E", "F", "G", "A", "B"]},
+        "octave": {"type": "integer"},
+        "alter": {"type": "integer", "minimum": -2, "maximum": 2}
+      }
+    },
+    "duration": {"type": "string", "pattern": "^[1-9][0-9]*/[1-9][0-9]*$"},
+    "tab_position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["string", "fret"],
+      "properties": {
+        "string": {"type": "integer", "minimum": 1},
+        "fret": {"type": "integer", "minimum": 0},
+        "course": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pitch", "duration", "id", "voice", "tab", "provenance"],
+      "properties": {
+        "pitch": {"$ref": "#/$defs/pitch"},
+        "duration": {"$ref": "#/$defs/duration"},
+        "id": {"type": "string", "minLength": 1},
+        "voice": {"type": "integer", "minimum": 1},
+        "tab": {"type": "array"},
+        "provenance": {"type": "object"}
+      }
+    },
+    "rest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["duration", "id", "voice", "provenance"],
+      "properties": {
+        "duration": {"$ref": "#/$defs/duration"},
+        "id": {"type": "string", "minLength": 1},
+        "voice": {"type": "integer", "minimum": 1},
+        "provenance": {"type": "object"}
+      }
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "events"],
+      "properties": {
+        "number": {"type": "integer", "minimum": 1},
+        "events": {"type": "array"}
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "voices", "time_signature", "pickup"],
+      "properties": {
+        "number": {"type": "integer", "minimum": 1},
+        "voices": {"type": "array", "items": {"$ref": "#/$defs/voice"}},
+        "time_signature": {"type": ["object", "null"]},
+        "pickup": {"type": "boolean"}
+      }
+    },
+    "staff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "clef", "measures"],
+      "properties": {
+        "number": {"type": "integer", "minimum": 1},
+        "clef": {"type": ["string", "null"]},
+        "measures": {"type": "array", "items": {"$ref": "#/$defs/measure"}}
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "staves", "instrument", "transposition_semitones"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string"},
+        "staves": {"type": "array", "items": {"$ref": "#/$defs/staff"}},
+        "instrument": {"type": ["string", "null"]},
+        "transposition_semitones": {"type": "integer"}
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parts"],
+      "properties": {"parts": {"type": "array", "items": {"$ref": "#/$defs/part"}}}
+    }
+  }
+}
